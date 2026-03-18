@@ -35,7 +35,10 @@
       "Bash(pip show:*)",
       "Bash(/tmp/structure.txt:*)",
       "Read(//tmp/**)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl:*)"
     ]
   }
 }

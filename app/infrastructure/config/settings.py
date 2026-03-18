@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_password: str = ""
-    auth_password: str
+    auth_password: str = ""
     kakao_client_id: str = ""
     kakao_redirect_uri: str = ""
     serp_api_key: str = ""
