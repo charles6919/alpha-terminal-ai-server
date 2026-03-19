@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.domains.auth.adapter.inbound.api.auth_router import router as auth_router
 from app.domains.kakao_auth.adapter.inbound.api.kakao_authentication_router import router as kakao_authentication_router
@@ -21,6 +22,14 @@ settings: Settings = get_settings()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(debug=settings.debug)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router)
 app.include_router(kakao_authentication_router)
