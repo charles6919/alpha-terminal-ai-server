@@ -18,6 +18,7 @@ from app.domains.pipeline.adapter.inbound.api.pipeline_router import router as p
 from app.domains.post.adapter.inbound.api.post_router import router as post_router
 from app.domains.post.infrastructure.orm.post_orm import PostORM  # noqa: F401
 from app.domains.watchlist.adapter.inbound.api.watchlist_router import router as watchlist_router
+from app.domains.stock.adapter.inbound.api.stock_router import router as stock_router
 from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import WatchlistItemORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
@@ -58,6 +59,7 @@ app.include_router(collector_router)
 app.include_router(normalizer_router)
 app.include_router(analyzer_router)
 app.include_router(pipeline_router)
+app.include_router(stock_router)
 
 
 @app.get("/")
