@@ -22,6 +22,7 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                 sentiment=log.sentiment,
                 sentiment_score=log.sentiment_score,
                 confidence=log.confidence,
+                source_type=log.source_type,
                 account_id=account_id,
             )
             self._db.add(orm)
@@ -42,6 +43,7 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                 sentiment=orm.sentiment,
                 sentiment_score=orm.sentiment_score,
                 confidence=orm.confidence,
+                source_type=orm.source_type or "NEWS",
                 account_id=orm.account_id,
             )
             for orm in orms

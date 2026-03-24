@@ -12,6 +12,7 @@ from app.domains.stock_analyzer.adapter.outbound.external.openai_analyzer_adapte
 from app.domains.stock_analyzer.adapter.outbound.in_memory.article_analysis_repository_impl import InMemoryArticleAnalysisRepository
 from app.domains.stock_analyzer.application.usecase.get_or_create_analysis_usecase import GetOrCreateAnalysisUseCase
 from app.domains.stock_collector.adapter.outbound.external.dart_collector_adapter import DartCollectorAdapter
+from app.domains.stock_collector.adapter.outbound.external.dart_report_collector_adapter import DartReportCollectorAdapter
 from app.domains.stock_collector.adapter.outbound.external.news_collector_adapter import NewsCollectorAdapter
 from app.domains.stock_collector.adapter.outbound.persistence.raw_article_repository_impl import RawArticleRepositoryImpl
 from app.domains.stock_normalizer.application.usecase.normalize_raw_article_usecase import NormalizeRawArticleUseCase
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 _settings = get_settings()
 _analysis_repository = InMemoryArticleAnalysisRepository()
 _summary_registry: dict[Optional[int], dict[str, StockSummaryResponse]] = {}
+_report_summary_registry: dict[Optional[int], dict[str, StockSummaryResponse]] = {}
 
 
 @router.post("/run")
@@ -37,7 +39,7 @@ async def run_pipeline(
     usecase = RunPipelineUseCase(
         watchlist_repository=WatchlistRepositoryImpl(db),
         raw_article_repository=RawArticleRepositoryImpl(db),
-        collectors=[DartCollectorAdapter(), NewsCollectorAdapter()],
+        collectors=[DartCollectorAdapter(), DartReportCollectorAdapter(), NewsCollectorAdapter()],
         normalize_usecase=NormalizeRawArticleUseCase(normalized_article_repository),
         analysis_usecase=GetOrCreateAnalysisUseCase(
             article_repository=normalized_article_repository,
@@ -53,6 +55,11 @@ async def run_pipeline(
     for summary in result["summaries"]:
         _summary_registry[parsed_account_id][summary.symbol] = summary
 
+    if parsed_account_id not in _report_summary_registry:
+        _report_summary_registry[parsed_account_id] = {}
+    for summary in result.get("report_summaries", []):
+        _report_summary_registry[parsed_account_id][summary.symbol] = summary
+
     log_repo = AnalysisLogRepositoryImpl(db)
     log_repo.save_all(result.get("logs", []), account_id=parsed_account_id)
 
@@ -63,6 +70,13 @@ async def run_pipeline(
 async def get_summaries(account_id: Optional[str] = Cookie(default=None)):
     parsed_account_id = int(account_id) if account_id else None
     user_registry = _summary_registry.get(parsed_account_id, {})
+    return list(user_registry.values())
+
+
+@router.get("/report-summaries", response_model=List[StockSummaryResponse])
+async def get_report_summaries(account_id: Optional[str] = Cookie(default=None)):
+    parsed_account_id = int(account_id) if account_id else None
+    user_registry = _report_summary_registry.get(parsed_account_id, {})
     return list(user_registry.values())
 
 
