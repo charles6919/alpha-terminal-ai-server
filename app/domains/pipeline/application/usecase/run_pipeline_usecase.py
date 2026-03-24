@@ -67,7 +67,7 @@ class RunPipelineUseCase:
             report_best = await self._analyze_best(report_articles[:3], symbol)
 
             if news_best:
-                analysis, source_type = news_best
+                analysis, source_type, url = news_best
                 tags = [t.label for t in analysis.tags]
                 summaries.append(StockSummaryResponse(
                     symbol=symbol, name=name,
@@ -76,6 +76,7 @@ class RunPipelineUseCase:
                     sentiment_score=analysis.sentiment_score,
                     confidence=analysis.confidence,
                     source_type=source_type,
+                    url=url,
                 ))
                 logs.append(AnalysisLogResponse(
                     analyzed_at=datetime.now(), symbol=symbol, name=name,
@@ -87,7 +88,7 @@ class RunPipelineUseCase:
                 ))
 
             if report_best:
-                analysis, source_type = report_best
+                analysis, source_type, url = report_best
                 tags = [t.label for t in analysis.tags]
                 report_summaries.append(StockSummaryResponse(
                     symbol=symbol, name=name,
@@ -96,6 +97,7 @@ class RunPipelineUseCase:
                     sentiment_score=analysis.sentiment_score,
                     confidence=analysis.confidence,
                     source_type=source_type,
+                    url=url,
                 ))
                 logs.append(AnalysisLogResponse(
                     analyzed_at=datetime.now(), symbol=symbol, name=name,
@@ -123,6 +125,7 @@ class RunPipelineUseCase:
         """주어진 raw_article 목록에서 가장 높은 confidence의 분석 결과 반환"""
         best_analysis = None
         best_source_type = None
+        best_url = None
 
         for raw in raw_articles:
             try:
@@ -147,6 +150,7 @@ class RunPipelineUseCase:
                 if best_analysis is None or analysis.confidence > best_analysis.confidence:
                     best_analysis = analysis
                     best_source_type = raw.source_type
+                    best_url = getattr(raw, "url", None)
 
             except Exception as e:
                 logger.warning(f"[Pipeline] {symbol} 분석 실패: {e}")
@@ -154,4 +158,4 @@ class RunPipelineUseCase:
 
         if best_analysis is None:
             return None
-        return best_analysis, best_source_type
+        return best_analysis, best_source_type, best_url

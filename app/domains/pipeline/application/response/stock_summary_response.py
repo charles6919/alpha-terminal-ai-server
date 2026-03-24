@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -10,3 +12,4 @@ class StockSummaryResponse(BaseModel):
     sentiment_score: float
     confidence: float
     source_type: str = "NEWS"  # NEWS | DISCLOSURE | REPORT
+    url: Optional[str] = None
