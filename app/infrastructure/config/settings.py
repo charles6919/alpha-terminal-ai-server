@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     kakao_client_secret: str = ""
     kakao_redirect_uri: str = ""
     serp_api_key: str = ""
+    finnhub_api_key: str = ""
     dart_api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
