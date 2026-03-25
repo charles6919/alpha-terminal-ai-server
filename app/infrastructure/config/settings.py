@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 from pydantic_settings import BaseSettings
 
 
@@ -19,6 +17,10 @@ class Settings(BaseSettings):
     kakao_redirect_uri: str = ""
     serp_api_key: str = ""
     finnhub_api_key: str = ""
+    data_go_kr_service_key: str = ""
+    twelve_data_api_key: str = ""
+    # BL-BE-15: False면 히트맵 캐시는 인메모리만
+    heatmap_redis_cache_enabled: bool = True
     dart_api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
@@ -32,6 +34,10 @@ class Settings(BaseSettings):
     }
 
 
-@lru_cache
 def get_settings() -> Settings:
+    """매 호출 시 Settings 재생성 — .env 변경이 요청 핸들러 경로에 반영됨(BL-BE-16).
+
+    주의: 모듈 import 시점에 한 번만 평가되는 전역(예: redis_client 연결 인자,
+    main.settings)은 프로세스 재시작 전까지 갱신되지 않는다.
+    """
     return Settings()

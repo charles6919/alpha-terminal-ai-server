@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from app.domains.stock.domain.entity.stock import Stock
 
@@ -8,6 +8,11 @@ class StockRepositoryPort(ABC):
 
     @abstractmethod
     def search_by_name(self, keyword: str, limit: int = 20) -> List[Stock]:
+        pass
+
+    @abstractmethod
+    def find_market_by_symbol(self, symbol: str) -> Optional[str]:
+        """DB에 있으면 market 문자열, 없으면 None"""
         pass
 
     @abstractmethod

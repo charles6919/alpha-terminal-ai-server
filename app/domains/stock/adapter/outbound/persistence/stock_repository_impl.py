@@ -1,5 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+from sqlalchemy import func, or_
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import Session
 
@@ -15,13 +16,25 @@ class StockRepositoryImpl(StockRepositoryPort):
         self._db = db
 
     def search_by_name(self, keyword: str, limit: int = 20) -> List[Stock]:
+        kw = keyword.strip()
+        pattern = f"%{kw}%"
+        pattern_sym = f"%{kw.lower()}%"
         orms = (
             self._db.query(StockORM)
-            .filter(StockORM.name.like(f"%{keyword}%"))
+            .filter(
+                or_(
+                    StockORM.name.like(pattern),
+                    func.lower(StockORM.symbol).like(pattern_sym),
+                )
+            )
             .limit(limit)
             .all()
         )
         return [StockMapper.to_entity(o) for o in orms]
+
+    def find_market_by_symbol(self, symbol: str) -> Optional[str]:
+        row = self._db.query(StockORM).filter(StockORM.symbol == symbol).one_or_none()
+        return row.market if row else None
 
     def bulk_upsert(self, stocks: List[Stock]) -> int:
         if not stocks:
