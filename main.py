@@ -47,6 +47,24 @@ settings: Settings = get_settings()
 Base.metadata.create_all(bind=engine)
 
 
+def _run_column_migrations():
+    """create_all이 처리하지 못하는 기존 테이블 컬럼 추가를 수동으로 실행."""
+    from sqlalchemy import text
+    migrations = [
+        "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_watchlist_public BOOLEAN NOT NULL DEFAULT FALSE",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                pass
+
+
+_run_column_migrations()
+
+
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
     from app.domains.pipeline.adapter.inbound.api.pipeline_router import run_pipeline_job
