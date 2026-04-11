@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from app.domains.news_search.application.request.save_article_request import SaveArticleRequest
@@ -6,6 +7,8 @@ from app.domains.news_search.application.usecase.article_content_fetcher_port im
 from app.domains.news_search.application.usecase.article_content_store_port import ArticleContentStorePort
 from app.domains.news_search.application.usecase.saved_article_repository_port import SavedArticleRepositoryPort
 from app.domains.news_search.domain.entity.saved_article import SavedArticle
+
+logger = logging.getLogger(__name__)
 
 
 class SaveArticleUseCase:
@@ -47,11 +50,17 @@ class SaveArticleUseCase:
             "published_at": request.published_at,
             "content": content,
         }
-        self._content_store.store(
-            article_id=saved.id,
-            account_id=account_id,
-            raw_data=raw_data,
-        )
+        try:
+            self._content_store.store(
+                article_id=saved.id,
+                account_id=account_id,
+                raw_data=raw_data,
+            )
+        except Exception:
+            logger.exception(
+                "PostgreSQL content store failed; article id=%s remains in MySQL only",
+                saved.id,
+            )
 
         return SaveArticleResponse(
             id=saved.id,

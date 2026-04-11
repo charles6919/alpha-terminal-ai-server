@@ -1,8 +1,11 @@
+import logging
 from typing import List
 
 from app.domains.news_search.application.response.saved_article_item_response import SavedArticleItemResponse, SavedArticleListResponse
 from app.domains.news_search.application.usecase.article_content_store_port import ArticleContentStorePort
 from app.domains.news_search.application.usecase.saved_article_repository_port import SavedArticleRepositoryPort
+
+logger = logging.getLogger(__name__)
 
 
 class ListSavedArticlesUseCase:
@@ -14,7 +17,15 @@ class ListSavedArticlesUseCase:
         articles = self._repository.find_all_by_account(account_id)
         items = []
         for a in articles:
-            content = self._content_store.get_content(a.id)
+            content = None
+            try:
+                content = self._content_store.get_content(a.id)
+            except Exception as e:
+                logger.warning(
+                    "get_content failed for article_id=%s: %s",
+                    a.id,
+                    e,
+                )
             items.append(SavedArticleItemResponse(
                 id=a.id,
                 title=a.title,

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -47,10 +48,18 @@ from app.infrastructure.database.session import Base, engine
 from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
 
+logger = logging.getLogger(__name__)
+
 settings: Settings = get_settings()
 
 Base.metadata.create_all(bind=engine)
-PgBase.metadata.create_all(bind=pg_engine)
+try:
+    PgBase.metadata.create_all(bind=pg_engine)
+except Exception:
+    logger.exception(
+        "PostgreSQL schema init failed — JSONB article content store unavailable. "
+        "Check PG_* env and that Postgres is reachable from the API container (not host localhost unless network_mode=host)."
+    )
 
 
 def _run_column_migrations():
