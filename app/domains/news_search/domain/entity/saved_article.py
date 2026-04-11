@@ -8,7 +8,7 @@ class SavedArticle:
     title: str
     link: str
     source: str
-    content: str
+    account_id: int
     snippet: Optional[str] = None
     published_at: Optional[str] = None
     id: Optional[int] = None

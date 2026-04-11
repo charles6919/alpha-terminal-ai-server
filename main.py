@@ -11,6 +11,7 @@ from app.domains.kakao_auth.adapter.inbound.api.kakao_authentication_router impo
 from app.domains.news_search.adapter.inbound.api.news_search_router import router as news_search_router
 from app.domains.news_search.adapter.inbound.api.saved_article_router import router as saved_article_router
 from app.domains.news_search.infrastructure.orm.saved_article_orm import SavedArticleORM  # noqa: F401
+from app.domains.news_search.infrastructure.orm.saved_article_content_orm import SavedArticleContentORM  # noqa: F401
 from app.domains.pipeline.adapter.inbound.api.pipeline_router import router as pipeline_router
 from app.domains.pipeline.infrastructure.orm.analysis_log_orm import AnalysisLogORM  # noqa: F401
 from app.domains.board.adapter.inbound.api.board_router import router as board_router
@@ -57,6 +58,11 @@ def _run_column_migrations():
     from sqlalchemy import text
     migrations = [
         "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_watchlist_public BOOLEAN NOT NULL DEFAULT TRUE",
+        # BL-BE-60: saved_articles — account_id 추가, content 제거, unique constraint 변경
+        "ALTER TABLE saved_articles ADD COLUMN IF NOT EXISTS account_id INT NOT NULL DEFAULT 0",
+        "ALTER TABLE saved_articles DROP COLUMN IF EXISTS content",
+        "ALTER TABLE saved_articles DROP INDEX link_hash",
+        "ALTER TABLE saved_articles ADD UNIQUE INDEX uq_saved_articles_account_link (account_id, link_hash)",
     ]
     with engine.connect() as conn:
         for sql in migrations:

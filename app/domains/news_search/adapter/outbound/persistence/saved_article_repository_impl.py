@@ -1,5 +1,5 @@
 from hashlib import sha256
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -20,9 +20,16 @@ class SavedArticleRepositoryImpl(SavedArticleRepositoryPort):
         self._db.refresh(orm)
         return SavedArticleMapper.to_entity(orm)
 
-    def find_by_link(self, link: str) -> Optional[SavedArticle]:
+    def find_by_link_and_account(self, link: str, account_id: int) -> Optional[SavedArticle]:
         link_hash = sha256(link.encode()).hexdigest()
-        orm = self._db.query(SavedArticleORM).filter(SavedArticleORM.link_hash == link_hash).first()
+        orm = (
+            self._db.query(SavedArticleORM)
+            .filter(
+                SavedArticleORM.link_hash == link_hash,
+                SavedArticleORM.account_id == account_id,
+            )
+            .first()
+        )
         if orm is None:
             return None
         return SavedArticleMapper.to_entity(orm)
@@ -32,3 +39,12 @@ class SavedArticleRepositoryImpl(SavedArticleRepositoryPort):
         if orm is None:
             return None
         return SavedArticleMapper.to_entity(orm)
+
+    def find_all_by_account(self, account_id: int) -> List[SavedArticle]:
+        orms = (
+            self._db.query(SavedArticleORM)
+            .filter(SavedArticleORM.account_id == account_id)
+            .order_by(SavedArticleORM.saved_at.desc())
+            .all()
+        )
+        return [SavedArticleMapper.to_entity(orm) for orm in orms]

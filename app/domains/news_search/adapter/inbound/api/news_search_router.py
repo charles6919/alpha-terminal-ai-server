@@ -13,12 +13,13 @@ router = APIRouter(prefix="/news", tags=["news"])
 
 
 def _build_adapter(market: Optional[str]):
-    serp = SerpNewsSearchAdapter()
-    if market == "US":
-        return CompositeNewsSearchAdapter([serp, FinnhubNewsSearchAdapter()])
     if market == "KR":
+        serp = SerpNewsSearchAdapter(hl="ko", gl="kr")
         return CompositeNewsSearchAdapter([serp, NaverNewsSearchAdapter()])
-    return serp
+    if market == "US":
+        serp = SerpNewsSearchAdapter(hl="en", gl="us")
+        return CompositeNewsSearchAdapter([serp, FinnhubNewsSearchAdapter()])
+    return SerpNewsSearchAdapter()
 
 
 @router.get("/search", response_model=SearchNewsResponse)

@@ -9,3 +9,4 @@ class SaveArticleRequest(BaseModel):
     source: str = Field(default="")
     snippet: Optional[str] = None
     published_at: Optional[str] = None
+    content: Optional[str] = None

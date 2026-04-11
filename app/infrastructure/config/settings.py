@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     kakao_client_secret: str = ""
     kakao_redirect_uri: str = ""
     serp_api_key: str = ""
+    serp_base_url: str = "https://serpapi.com/search"
+    serp_timeout: float = 10.0
     finnhub_api_key: str = ""
     data_go_kr_service_key: str = ""
     twelve_data_api_key: str = ""

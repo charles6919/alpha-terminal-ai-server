@@ -4,17 +4,18 @@ from typing import Optional
 
 from app.domains.news_search.application.request.analyze_article_request import AnalyzeArticleRequest
 from app.domains.news_search.application.request.bulk_analyze_request import BulkAnalyzeRequest
-from app.domains.news_search.application.request.save_article_request import SaveArticleRequest
 from app.domains.news_search.application.response.bulk_analyze_response import BulkAnalyzeItem, BulkAnalyzeResponse
 from app.domains.news_search.application.usecase.analyze_article_usecase import AnalyzeArticleUseCase
 from app.domains.news_search.application.usecase.article_analysis_port import ArticleAnalysisPort
-from app.domains.news_search.application.usecase.article_content_port import ArticleContentPort
+from app.domains.news_search.application.usecase.article_content_store_port import ArticleContentStorePort
 from app.domains.news_search.application.usecase.news_search_port import NewsSearchPort
-from app.domains.news_search.application.usecase.save_article_usecase import SaveArticleUseCase
 from app.domains.news_search.application.usecase.saved_article_repository_port import SavedArticleRepositoryPort
 from app.domains.news_search.domain.entity.news_article import NewsArticle
+from app.domains.news_search.domain.entity.saved_article import SavedArticle
 
 logger = logging.getLogger(__name__)
+
+_BULK_SYSTEM_ACCOUNT_ID = 0
 
 
 class BulkAnalyzeUseCase:
@@ -22,26 +23,42 @@ class BulkAnalyzeUseCase:
         self,
         news_search_port: NewsSearchPort,
         repository: SavedArticleRepositoryPort,
-        content_fetcher: ArticleContentPort,
+        content_store: ArticleContentStorePort,
         analysis_port: ArticleAnalysisPort,
     ):
         self._news_search_port = news_search_port
         self._repository = repository
-        self._save_usecase = SaveArticleUseCase(repository, content_fetcher)
-        self._analyze_usecase = AnalyzeArticleUseCase(repository, analysis_port)
+        self._content_store = content_store
+        self._analyze_usecase = AnalyzeArticleUseCase(repository, analysis_port, content_store)
 
-    def _save_article(self, article: NewsArticle) -> Optional[int]:
+    def _save_article(self, article: NewsArticle, account_id: int) -> Optional[int]:
         try:
-            existing = self._repository.find_by_link(article.link)
+            existing = self._repository.find_by_link_and_account(article.link, account_id)
             if existing:
                 return existing.id
-            saved = self._save_usecase.execute(SaveArticleRequest(
+
+            saved = self._repository.save(SavedArticle(
                 title=article.title,
                 link=article.link,
                 source=article.source,
                 snippet=article.snippet,
                 published_at=article.published_at,
+                account_id=account_id,
             ))
+
+            self._content_store.store(
+                article_id=saved.id,
+                account_id=account_id,
+                raw_data={
+                    "title": article.title,
+                    "link": article.link,
+                    "source": article.source,
+                    "snippet": article.snippet,
+                    "published_at": article.published_at,
+                    "content": None,
+                },
+            )
+
             return saved.id
         except Exception as e:
             logger.warning(f"기사 저장 실패 [{article.title}]: {e}")
@@ -61,14 +78,15 @@ class BulkAnalyzeUseCase:
             logger.warning(f"기사 분석 건너뜀 [id={article_id}]: {e}")
             return None
 
-    async def execute(self, request: BulkAnalyzeRequest) -> BulkAnalyzeResponse:
+    async def execute(self, request: BulkAnalyzeRequest, account_id: Optional[int] = None) -> BulkAnalyzeResponse:
+        effective_account_id = account_id if account_id is not None else _BULK_SYSTEM_ACCOUNT_ID
         articles, _ = self._news_search_port.search(request.query, page=1, page_size=request.page_size)
         articles = articles[:request.page_size]
 
         # 1단계: 전체 저장 (순차 — DB 세션 충돌 방지)
         saved_pairs = []
         for article in articles:
-            article_id = self._save_article(article)
+            article_id = self._save_article(article, effective_account_id)
             if article_id is not None:
                 saved_pairs.append((article_id, article.title))
 
