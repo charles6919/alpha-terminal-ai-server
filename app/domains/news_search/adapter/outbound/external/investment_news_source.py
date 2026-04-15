@@ -23,8 +23,12 @@ CONTENT_PREVIEW_CHARS = 800  # retrieval_data 에 포함할 본문 미리보기 
 NEWS_PAGE_SIZE = 5
 
 
-def _save_to_db(articles_data: list) -> None:
-    """MySQL + PostgreSQL 저장 (동기 — executor 에서 호출)."""
+def _save_to_db(articles_data: list) -> dict:
+    """MySQL + PostgreSQL 저장 (동기 — executor 에서 호출).
+
+    Returns:
+        {"success": bool, "count": int, "error": str | None}
+    """
     from app.domains.news_search.infrastructure.orm.investment_news_orm import InvestmentNewsORM
     from app.domains.news_search.infrastructure.orm.investment_news_content_orm import InvestmentNewsContentORM
     from app.infrastructure.database.session import SessionLocal
@@ -88,12 +92,14 @@ def _save_to_db(articles_data: list) -> None:
         mysql_db.commit()
         pg_db.commit()
         print(f"[InvestmentNews] DB commit 완료 | {len(articles_data)}건")
+        return {"success": True, "count": len(articles_data), "error": None}
 
-    except Exception:
+    except Exception as e:
         mysql_db.rollback()
         pg_db.rollback()
         print("[InvestmentNews] ✗ DB 트랜잭션 실패 → rollback")
         traceback.print_exc()
+        return {"success": False, "count": 0, "error": str(e)}
     finally:
         mysql_db.close()
         pg_db.close()
@@ -128,7 +134,7 @@ async def fetch_and_store_investment_news(
     except Exception:
         await aemit("[InvestmentNews] ✗ SERP 검색 실패")
         traceback.print_exc()
-        return "=== 투자 뉴스 수집 실패 ==="
+        return "=== 투자 뉴스 수집 실패 ===", {}
 
     if not articles:
         await aemit("[InvestmentNews] ⚠ 검색 결과 없음")

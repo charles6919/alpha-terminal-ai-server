@@ -16,9 +16,7 @@ reasons / risk_factors           : LLM rationale 생성
 
 입력 신호 부족 시 보수적 fallback: verdict=hold, confidence=0.3
 """
-import json
 import math
-import re
 from typing import Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -26,6 +24,7 @@ from langchain_openai import ChatOpenAI
 
 from app.domains.investment.adapter.outbound.agent.log_context import aemit
 from app.infrastructure.config.settings import get_settings
+from app.infrastructure.json_utils import extract_json_from_markdown
 
 # ---------------------------------------------------------------------------
 # 가중치 상수
@@ -107,16 +106,6 @@ def compute_direction_confidence_verdict(
 # LLM rationale 생성 (reasons + risk_factors)
 # ---------------------------------------------------------------------------
 
-def _extract_json(text: str) -> dict:
-    m = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text)
-    if m:
-        return json.loads(m.group(1))
-    m = re.search(r"\{[\s\S]+\}", text)
-    if m:
-        return json.loads(m.group(0))
-    raise ValueError(f"JSON 블록 없음: {text[:200]}")
-
-
 async def _generate_rationale(
     company: Optional[str],
     intent: str,
@@ -168,7 +157,7 @@ async def _generate_rationale(
             )),
             HumanMessage(content=human_msg),
         ])
-        data = _extract_json(response.content.strip())
+        data = extract_json_from_markdown(response.content.strip())
         reasons = data.get("reasons", {"positive": [], "negative": []})
         risk_factors = data.get("risk_factors", [])
         return reasons, risk_factors

@@ -19,8 +19,6 @@ YouTube 지표:
         "keywords": [...]           # 핵심 투자 키워드 TOP 10
     }
 """
-import json
-import re
 from typing import Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -28,6 +26,7 @@ from langchain_openai import ChatOpenAI
 
 from app.domains.investment.adapter.outbound.agent.log_context import aemit
 from app.infrastructure.config.settings import get_settings
+from app.infrastructure.json_utils import extract_json_from_markdown
 
 MAX_COMMENTS = 200           # LLM에 전달할 최대 댓글 수
 COMMENT_MAX_CHARS = 80       # 댓글당 최대 글자 수 (토큰 절약)
@@ -55,20 +54,6 @@ def _empty_news_metrics() -> dict:
         "negative_events": [],
         "keywords": [],
     }
-
-
-# ---------------------------------------------------------------------------
-# JSON 파싱 헬퍼
-# ---------------------------------------------------------------------------
-
-def _extract_json(text: str) -> dict:
-    match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text)
-    if match:
-        return json.loads(match.group(1))
-    match = re.search(r"\{[\s\S]+\}", text)
-    if match:
-        return json.loads(match.group(0))
-    raise ValueError(f"JSON 블록 없음: {text[:200]}")
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +135,7 @@ async def analyze_youtube_comments(
             SystemMessage(content=system_msg),
             HumanMessage(content=human_msg),
         ])
-        metrics = _extract_json(response.content.strip())
+        metrics = extract_json_from_markdown(response.content.strip())
         metrics["volume"] = volume  # 전체 댓글 수 보정
 
         sd = metrics.get("sentiment_distribution", {})
@@ -244,7 +229,7 @@ async def analyze_news_articles(articles: list[dict]) -> dict:
             SystemMessage(content=system_msg),
             HumanMessage(content=human_msg),
         ])
-        metrics = _extract_json(response.content.strip())
+        metrics = extract_json_from_markdown(response.content.strip())
 
         await aemit(f"[SentimentAnalyzer][뉴스] ◀ 분석 완료")
         await aemit(
