@@ -14,3 +14,4 @@ class AccountORM(Base):
     nickname = Column(String(100), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     is_watchlist_public = Column(Boolean, default=True, nullable=False)
+    role = Column(String(10), nullable=False, default="NORMAL")

@@ -23,11 +23,13 @@ class RegisterAccountUseCase:
         temp_token_port: TempTokenPort,
         kakao_token_store: KakaoTokenStorePort,
         session_store: AccountSessionStorePort,
+        admin_secret_code: str = "",
     ):
         self._account_repository = account_repository
         self._temp_token_port = temp_token_port
         self._kakao_token_store = kakao_token_store
         self._session_store = session_store
+        self._admin_secret_code = admin_secret_code
 
     def execute(self, temp_token: str, request: RegisterAccountRequest) -> RegisterAccountResponse:
         temp_token_data = self._temp_token_port.find(temp_token)
@@ -39,6 +41,12 @@ class RegisterAccountUseCase:
         if not kakao_access_token or not kakao_id:
             raise ValueError("임시 토큰 정보가 올바르지 않습니다.")
 
+        # 관리자 코드 검증
+        role = "NORMAL"
+        if request.admin_code and self._admin_secret_code and request.admin_code == self._admin_secret_code:
+            role = "ADMIN"
+            logger.info(f"[Register] ADMIN 역할 부여 | kakao_id={kakao_id}")
+
         account = self._account_repository.find_by_kakao_id(kakao_id)
         if account is None:
             existing_email_account = self._account_repository.find_by_email(request.email)
@@ -47,19 +55,20 @@ class RegisterAccountUseCase:
                 if existing_email_account.kakao_id == existing_email_account.email:
                     existing_email_account.kakao_id = kakao_id
                     existing_email_account.nickname = request.nickname
+                    existing_email_account.role = role
                     account = self._account_repository.update(existing_email_account)
                 else:
                     raise AccountLinkConflictError("이미 다른 카카오 계정에 연결된 이메일입니다.")
             else:
                 account = self._account_repository.save(
-                    Account(email=request.email, kakao_id=kakao_id, nickname=request.nickname)
+                    Account(email=request.email, kakao_id=kakao_id, nickname=request.nickname, role=role)
                 )
 
         self._temp_token_port.delete(temp_token)
 
         self._kakao_token_store.save(account.id, kakao_access_token)
 
-        session_token = self._session_store.create_session(account.id)
+        session_token = self._session_store.create_session(account.id, account.role)
 
         logger.debug(f"[Register] account_id={account.id} email={account.email} session_prefix={session_token[:8]}...")
 

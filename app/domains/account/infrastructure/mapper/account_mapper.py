@@ -12,6 +12,7 @@ class AccountMapper:
             kakao_id=orm.kakao_id,
             nickname=orm.nickname,
             created_at=orm.created_at,
+            role=orm.role or "NORMAL",
         )
 
     @staticmethod
@@ -20,4 +21,5 @@ class AccountMapper:
             email=entity.email,
             kakao_id=entity.kakao_id,
             nickname=entity.nickname,
+            role=entity.role,
         )

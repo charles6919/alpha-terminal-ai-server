@@ -18,12 +18,13 @@ class RedisAccountSessionAdapter(AccountSessionStorePort):
         self._redis = redis_client
         self._session_adapter = RedisSessionAdapter(redis_client)
 
-    def create_session(self, account_id: int) -> str:
-        return self.create(account_id)
+    def create_session(self, account_id: int, role: str = "NORMAL") -> str:
+        return self.create(account_id, role)
 
-    def create(self, account_id: int) -> str:
+    def create(self, account_id: int, role: str = "NORMAL") -> str:
         token = str(uuid.uuid4())
-        session = Session(token=token, user_id=str(account_id), role=UserRole.USER, ttl_seconds=SESSION_TTL_SECONDS)
+        user_role = UserRole(role) if role in UserRole._value2member_map_ else UserRole.NORMAL
+        session = Session(token=token, user_id=str(account_id), role=user_role, ttl_seconds=SESSION_TTL_SECONDS)
         self._session_adapter.save(session)
         return token
 

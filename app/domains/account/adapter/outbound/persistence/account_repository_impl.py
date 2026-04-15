@@ -45,6 +45,7 @@ class AccountRepositoryImpl(AccountRepositoryPort):
         orm.email = account.email
         orm.kakao_id = account.kakao_id
         orm.nickname = account.nickname
+        orm.role = account.role
         self._db.commit()
         self._db.refresh(orm)
         return AccountMapper.to_entity(orm)

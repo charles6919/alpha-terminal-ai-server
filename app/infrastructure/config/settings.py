@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     youtube_api_key: str = ""
     cors_allowed_frontend_url: str = "http://localhost:3000"
     frontend_auth_callback_url: str = "http://localhost:3000/auth-callback"
+    admin_secret_code: str = ""
     debug: bool = False
 
     model_config = {

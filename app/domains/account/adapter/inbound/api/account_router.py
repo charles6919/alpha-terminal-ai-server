@@ -49,6 +49,7 @@ async def register_account(
             temp_token_port=_temp_token_port,
             kakao_token_store=_kakao_token_store,
             session_store=_session_store,
+            admin_secret_code=_settings.admin_secret_code,
         )
         result = usecase.execute(temp_token, request)
 

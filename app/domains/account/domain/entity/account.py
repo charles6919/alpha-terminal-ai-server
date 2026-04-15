@@ -10,3 +10,4 @@ class Account:
     nickname: str
     id: Optional[int] = None
     created_at: datetime = field(default_factory=datetime.now)
+    role: str = "NORMAL"
