@@ -1,7 +1,9 @@
+from datetime import date, datetime, time, timedelta
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.domains.account.infrastructure.orm.account_orm import AccountORM
 from app.domains.user_profile.application.port.user_profile_repository_port import UserProfileRepositoryPort
 from app.domains.user_profile.domain.entity.user_interaction import UserInteraction
 from app.domains.user_profile.domain.entity.user_profile import UserProfile
@@ -53,3 +55,17 @@ class UserProfileRepositoryImpl(UserProfileRepositoryPort):
         self._db.commit()
         self._db.refresh(orm)
         return UserInteractionMapper.to_entity(orm)
+
+    def find_all_account_ids(self) -> List[int]:
+        rows = self._db.query(AccountORM.id).all()
+        return [row.id for row in rows]
+
+    def find_today_interactions(self, account_id: int, target_date: date) -> List[UserInteraction]:
+        start = datetime.combine(target_date, time.min)
+        end = start + timedelta(days=1)
+        orms = self._db.query(UserInteractionORM).filter(
+            UserInteractionORM.account_id == account_id,
+            UserInteractionORM.created_at >= start,
+            UserInteractionORM.created_at < end,
+        ).all()
+        return [UserInteractionMapper.to_entity(orm) for orm in orms]

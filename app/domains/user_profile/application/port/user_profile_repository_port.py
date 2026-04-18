@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import date
 from typing import List, Optional
 
 from app.domains.user_profile.domain.entity.user_interaction import UserInteraction
@@ -21,4 +22,12 @@ class UserProfileRepositoryPort(ABC):
 
     @abstractmethod
     def save_interaction(self, interaction: UserInteraction) -> UserInteraction:
+        pass
+
+    @abstractmethod
+    def find_all_account_ids(self) -> List[int]:
+        pass
+
+    @abstractmethod
+    def find_today_interactions(self, account_id: int, target_date: date) -> List[UserInteraction]:
         pass
