@@ -31,3 +31,15 @@ class UserProfileRepositoryPort(ABC):
     @abstractmethod
     def find_today_interactions(self, account_id: int, target_date: date) -> List[UserInteraction]:
         pass
+
+    @abstractmethod
+    def upsert_recently_viewed(self, interaction: UserInteraction) -> UserInteraction:
+        pass
+
+    @abstractmethod
+    def enforce_max_recently_viewed(self, account_id: int, max_count: int) -> None:
+        pass
+
+    @abstractmethod
+    def upsert_clicked_card(self, interaction: UserInteraction) -> UserInteraction:
+        pass

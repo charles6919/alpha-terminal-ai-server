@@ -46,6 +46,7 @@ from app.domains.stock_theme.adapter.inbound.api.stock_theme_router import route
 from app.domains.stock_theme.infrastructure.orm.stock_theme_orm import StockThemeORM  # noqa: F401
 from app.domains.user_profile.infrastructure.orm.user_profile_orm import UserProfileORM  # noqa: F401
 from app.domains.user_profile.infrastructure.orm.user_interaction_orm import UserInteractionORM  # noqa: F401
+from app.domains.user_profile.adapter.inbound.api.user_profile_router import router as user_profile_router
 from app.domains.market_analysis.adapter.inbound.api.market_analysis_router import router as market_analysis_router
 from app.domains.investment.adapter.inbound.api.investment_router import router as investment_router
 from app.domains.admin.adapter.inbound.api.admin_router import router as admin_router
@@ -227,6 +228,7 @@ app.include_router(market_analysis_router)
 app.include_router(investment_router)
 app.include_router(admin_router)
 app.include_router(notification_router)
+app.include_router(user_profile_router)
 
 
 @app.get("/")
