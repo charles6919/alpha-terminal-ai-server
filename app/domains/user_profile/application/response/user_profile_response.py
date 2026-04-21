@@ -54,3 +54,11 @@ class UserProfileResponse(BaseModel):
     preferred_stocks: List[str] = []
     interaction_history: InteractionHistoryResponse = InteractionHistoryResponse()
     interests_text: str = ""
+
+
+class InvestmentProfileResponse(BaseModel):
+    investment_style: str = ""
+    risk_tolerance: str = ""
+    preferred_sectors: List[str] = []
+    analysis_preference: str = ""
+    keywords_of_interest: List[str] = []

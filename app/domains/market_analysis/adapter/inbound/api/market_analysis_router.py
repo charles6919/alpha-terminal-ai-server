@@ -21,8 +21,8 @@ from app.domains.market_analysis.application.usecase.analyze_market_query_usecas
     AnalyzeMarketQueryUseCase,
 )
 from app.domains.market_analysis.application.usecase.explain_term_usecase import ExplainTermUseCase
-from app.domains.user_profile.adapter.outbound.persistence.mock_user_profile_repository import (
-    MockUserProfileRepository,
+from app.domains.user_profile.adapter.outbound.persistence.user_profile_repository_impl import (
+    UserProfileRepositoryImpl,
 )
 from app.infrastructure.cache.redis_client import redis_client
 from app.infrastructure.config.settings import get_settings
@@ -70,7 +70,7 @@ async def ask_market_analysis(
     settings = get_settings()
     repository = MarketDataRepositoryImpl(db)
     qa = LangChainQAAdapter(api_key=settings.openai_api_key, model=settings.openai_model)
-    user_profile_repository = MockUserProfileRepository()
+    user_profile_repository = UserProfileRepositoryImpl(db)
 
     await aemit(f"[MarketAnalysis][UserProfile] ▶ 프로필 조회 | account_id={aid}")
     profile = user_profile_repository.get_by_account_id(aid)

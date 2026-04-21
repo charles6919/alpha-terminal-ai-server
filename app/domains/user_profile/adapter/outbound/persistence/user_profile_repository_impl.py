@@ -24,6 +24,10 @@ class UserProfileRepositoryImpl(UserProfileRepositoryPort):
             return None
         return UserProfileMapper.to_entity(orm)
 
+    def get_by_account_id(self, account_id: int) -> Optional[UserProfile]:
+        """market_analysis.UserProfileRepositoryPort 호환 브릿지."""
+        return self.find_by_account_id(account_id)
+
     def save(self, profile: UserProfile) -> UserProfile:
         existing = self._db.query(UserProfileORM).filter(
             UserProfileORM.account_id == profile.account_id
@@ -33,6 +37,11 @@ class UserProfileRepositoryImpl(UserProfileRepositoryPort):
             import json
             existing.preferred_stocks = json.dumps(profile.preferred_stocks, ensure_ascii=False)
             existing.interests_text = profile.interests_text
+            existing.investment_style = profile.investment_style
+            existing.risk_tolerance = profile.risk_tolerance
+            existing.preferred_sectors = json.dumps(profile.preferred_sectors, ensure_ascii=False)
+            existing.analysis_preference = profile.analysis_preference
+            existing.keywords_of_interest = json.dumps(profile.keywords_of_interest, ensure_ascii=False)
             self._db.commit()
             self._db.refresh(existing)
             return UserProfileMapper.to_entity(existing)
