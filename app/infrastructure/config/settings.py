@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     heatmap_redis_cache_enabled: bool = True
     # BL-BE-89: market_videos 가 이 시간보다 오래됐으면 on-demand 재수집 trigger
     market_video_stale_hours: int = 6
+    # 파이프라인 진행/요약 상태 저장소 — True면 Redis 기반, 실패/False면 in-memory 폴백
+    pipeline_state_redis_enabled: bool = True
     naver_client_id: str = ""
     naver_secret: str = ""
     twitter_bearer_token: str = ""
