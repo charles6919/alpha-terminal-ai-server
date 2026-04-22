@@ -72,7 +72,6 @@ def validate_required_keys(s: Settings) -> None:
     """앱 시작 시 필수 API 키 누락 여부를 검증한다. 누락 시 ValueError로 즉시 중단."""
     required = {
         "kakao_client_id": s.kakao_client_id,
-        "kakao_client_secret": s.kakao_client_secret,
         "kakao_redirect_uri": s.kakao_redirect_uri,
         "openai_api_key": s.openai_api_key,
     }
