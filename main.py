@@ -71,8 +71,30 @@ logger = logging.getLogger(__name__)
 settings: Settings = get_settings()
 
 
+def _init_langchain_cache() -> None:
+    """LangChain LLM 응답 Redis 캐싱 — 동일 프롬프트 재호출 방지 (TTL 5분)"""
+    try:
+        import redis as _redis
+        from langchain_core.globals import set_llm_cache
+        from langchain_community.cache import RedisCache
+
+        _r = _redis.Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password or None,
+            db=1,
+            decode_responses=False,
+        )
+        set_llm_cache(RedisCache(redis_=_r, ttl=300))
+        logger.info("[LangChain] Redis LLM cache initialized (TTL=300s)")
+    except Exception as e:
+        logger.warning("[LangChain] Redis cache init failed — falling back to no cache: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
+    _init_langchain_cache()
+
     # MySQL 스키마 자동 생성 (IF NOT EXISTS — 기존 테이블 무해)
     try:
         Base.metadata.create_all(bind=engine)
@@ -83,11 +105,8 @@ async def lifespan(fastapi_app: FastAPI):
     # TODO: PG Alembic cutover 완료 후 아래 create_all 블록 제거하고 alembic upgrade head 로 대체
     try:
         PgBase.metadata.create_all(bind=pg_engine)
-    except Exception:
-        logger.exception(
-            "PostgreSQL schema init failed — JSONB article content store unavailable. "
-            "Check PG_* env and that Postgres is reachable from the API container (not host localhost unless network_mode=host)."
-        )
+    except Exception as _pg_err:
+        logger.warning("[PostgreSQL] 스키마 초기화 실패 — PG 미가용, 관련 기능 비활성화 (%s)", type(_pg_err).__name__)
 
     check_pg_health()
 

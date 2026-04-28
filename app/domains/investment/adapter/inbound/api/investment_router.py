@@ -103,14 +103,14 @@ def _lookup_symbol_by_name(company_name: str) -> Optional[str]:
         return orm.symbol if orm else None
 
 
-def _find_cached_answer(symbol: str, force: bool) -> Optional[str]:
-    """symbol 기준 유효 캐시를 동기 조회한다. force=True 이면 None 반환."""
+def _find_cached_answer(symbol: str, query: str, force: bool) -> Optional[str]:
+    """symbol + query 기준 유효 캐시를 동기 조회한다. force=True 이면 None 반환."""
     if force:
         return None
     from app.infrastructure.database.pg_session import pg_session_scope
 
     with pg_session_scope() as db:
-        cached = AnalysisCacheRepository(db).find_valid(symbol)
+        cached = AnalysisCacheRepository(db).find_valid(symbol, query)
         return cached.answer if cached else None
 
 
@@ -167,12 +167,16 @@ async def investment_decision_stream(
         except Exception:
             resolved_symbol = None
 
-    # 캐시 히트 시 즉시 반환
+    # 캐시 히트 시 즉시 반환 (PG 미가용 시 캐시 생략하고 워크플로우 실행)
+    cached_answer = None
     if resolved_symbol and not request.force:
-        loop = asyncio.get_event_loop()
-        cached_answer = await loop.run_in_executor(
-            None, _find_cached_answer, resolved_symbol, request.force
-        )
+        try:
+            loop = asyncio.get_event_loop()
+            cached_answer = await loop.run_in_executor(
+                None, _find_cached_answer, resolved_symbol, request.query, request.force
+            )
+        except Exception:
+            pass
         if cached_answer:
             async def _cached_generator():
                 yield f"data: {json.dumps({'type': 'log', 'data': f'[Cache] ✓ 캐시된 분석 결과 반환 ({resolved_symbol})'}, ensure_ascii=False)}\n\n"

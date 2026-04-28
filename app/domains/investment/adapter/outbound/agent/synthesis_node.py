@@ -84,6 +84,7 @@ def _build_system_prompt() -> str:
 
 def _build_human_prompt(
     query: str,
+    intent: str,
     company: Optional[str],
     verdict_kr: str,
     confidence: float,
@@ -101,19 +102,23 @@ def _build_human_prompt(
 
     return (
         f"사용자 질문: {query}\n"
+        f"질문 핵심 의도: {intent}\n"
         f"종목: {company or '미지정'}\n\n"
+        f"⚠ 반드시 위 '질문 핵심 의도'에 직접 답하세요. "
+        f"시간 범위(예: 2026년, 2027년)나 가격 목표 등 질문에 명시된 조건을 첫 문단에 언급하세요.\n\n"
         f"=== 투자 판단 결과 (변경 금지) ===\n"
         f"결론     : {verdict_kr}\n"
         f"방향성   : {'상승' if direction == 'bullish' else '하락' if direction == 'bearish' else '중립'}\n"
         f"확신도   : {conf_label}\n\n"
-        f"=== 긍정 근거 (이 내용만 사용) ===\n"
+        f"=== 긍정 근거 ===\n"
         + ("\n".join(f"- {r}" for r in positive_reasons) or "- 없음") + "\n\n"
-        f"=== 부정 근거 (이 내용만 사용) ===\n"
+        f"=== 부정 근거 ===\n"
         + ("\n".join(f"- {r}" for r in negative_reasons) or "- 없음") + "\n\n"
-        f"=== 리스크 요인 (이 내용만 사용) ===\n"
+        f"=== 리스크 요인 ===\n"
         + ("\n".join(f"- {r}" for r in risk_factors) or "- 없음")
         + f"\n{low_conf_note}\n\n"
-        f"위 정보를 바탕으로 응답을 작성하세요. verdict({verdict_kr})를 첫 문단에 명확히 표현하세요."
+        f"위 정보를 바탕으로 응답을 작성하세요. verdict({verdict_kr})를 첫 문단에 명확히 표현하고, "
+        f"질문의 시간 범위·의도에 맞는 구체적인 답변을 작성하세요."
     )
 
 
@@ -129,6 +134,7 @@ async def synthesis_node(state: InvestmentAgentState) -> dict:
     query = state["query"]
     parsed_query = state.get("parsed_query") or {}
     company: Optional[str] = parsed_query.get("company")
+    intent: str = parsed_query.get("intent") or query
     investment_verdict: Optional[dict] = state.get("investment_verdict")
     analysis: Optional[str] = state.get("analysis", "")
 
@@ -169,6 +175,7 @@ async def synthesis_node(state: InvestmentAgentState) -> dict:
         system_msg = _build_system_prompt()
         human_msg = _build_human_prompt(
             query=query,
+            intent=intent,
             company=company,
             verdict_kr=verdict_kr,
             confidence=confidence,

@@ -174,26 +174,34 @@ async def fetch_and_store_investment_news(
             await aemit("[InvestmentNews] ⚠ 네이버 뉴스도 없음")
             return "=== 투자 뉴스: 결과 없음 ===", {}
 
+    # SERP API가 page_size를 무시하는 경우 대비 — 명시적 제한
+    articles = articles[:page_size]
     await aemit(f"[InvestmentNews]   {total}건 중 {len(articles)}건 → 본문 추출 시작")
 
-    # 2. 각 기사 본문 추출 (부분 실패 허용)
+    # 2. 각 기사 본문 추출 (부분 실패 허용, 병렬 처리)
     fetcher = ArticleContentFetcher()
     articles_data = []
     lines = [f"=== 투자 뉴스 (keyword={effective_keyword}, {len(articles)}건) ==="]
 
-    for article in articles:
+    async def _fetch_content(article) -> Optional[str]:
+        if not article.link:
+            return None
+        try:
+            return await loop.run_in_executor(None, lambda u=article.link: fetcher.fetch(u))
+        except Exception:
+            traceback.print_exc()
+            return None
+
+    contents = await asyncio.gather(*[_fetch_content(a) for a in articles])
+
+    for article, content in zip(articles, contents):
         if not article.link:
             continue
-
-        content: Optional[str] = None
-        try:
-            url = article.link
-            content = await loop.run_in_executor(None, lambda u=url: fetcher.fetch(u))
-            char_count = len(content) if content else 0
+        char_count = len(content) if content else 0
+        if content:
             await aemit(f"[InvestmentNews]   ✓ 본문 {char_count}자 | {article.title[:40]}")
-        except Exception:
+        else:
             await aemit(f"[InvestmentNews]   ✗ 본문 수집 실패 | {article.title[:40]}")
-            traceback.print_exc()
 
         articles_data.append({
             "company": company,

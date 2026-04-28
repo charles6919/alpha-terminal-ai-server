@@ -358,16 +358,66 @@ async def _handle_price(keyword: str, company: Optional[str] = None) -> SourceRe
         resp.raise_for_status()
         return resp.json()
 
+    def _fetch_naver_quote():
+        """네이버 증권 모바일 API — 한국 종목 시세 조회 fallback.
+
+        엔드포인트: https://m.stock.naver.com/api/stock/{symbol}/basic
+        실제 응답 구조 (확인 완료):
+            closePrice: "1,292,000"               (현재가)
+            compareToPreviousClosePrice: "70,000" (등락 절댓값, 부호 없음)
+            compareToPreviousPrice.code: "2"=상승, "5"=하락
+            fluctuationsRatio: "5.73"             (등락률 절댓값, 부호 없음)
+
+        주의: high/low(h/l)는 이 endpoint에 포함되지 않음 → 0 반환.
+        """
+        resp = httpx.get(
+            f"https://m.stock.naver.com/api/stock/{symbol}/basic",
+            timeout=5.0,
+            headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        d = resp.json()
+
+        def _to_num(s):
+            if s is None: return 0.0
+            try:
+                return float(str(s).replace(",", "").replace("+", ""))
+            except (ValueError, TypeError):
+                return 0.0
+
+        cmp = d.get("compareToPreviousPrice") or {}
+        is_falling = isinstance(cmp, dict) and cmp.get("code") == "5"
+        sign = -1 if is_falling else 1
+
+        close = _to_num(d.get("closePrice"))
+        change_val = _to_num(d.get("compareToPreviousClosePrice")) * sign
+        change_pct = _to_num(d.get("fluctuationsRatio")) * sign
+
+        return {
+            "c": close,
+            "pc": close - change_val,
+            "d": change_val,
+            "dp": change_pct,
+            "h": 0,
+            "l": 0,
+        }
+
     try:
         data = await loop.run_in_executor(None, _fetch_quote)
+        if not data.get("c"):
+            raise ValueError("Finnhub 빈 시세")
     except Exception:
-        await aemit(f"[Retrieval][현재가] ✗ Finnhub API 실패: {finnhub_symbol}")
-        traceback.print_exc()
-        return "", None
+        await aemit(f"[Retrieval][현재가] ⚠ Finnhub 실패 → 네이버 fallback 시도: {symbol}")
+        try:
+            data = await loop.run_in_executor(None, _fetch_naver_quote)
+        except Exception:
+            await aemit(f"[Retrieval][현재가] ✗ 네이버 fallback도 실패: {symbol}")
+            traceback.print_exc()
+            return "", None
 
     current = data.get("c", 0)
     if not current:
-        await aemit(f"[Retrieval][현재가] ⚠ 유효한 시세 없음: {finnhub_symbol}")
+        await aemit(f"[Retrieval][현재가] ⚠ 유효한 시세 없음: {symbol}")
         return "", None
 
     prev_close = data.get("pc", 0)

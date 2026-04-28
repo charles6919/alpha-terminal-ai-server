@@ -71,5 +71,5 @@ def check_pg_health() -> bool:
         logger.info("[PostgreSQL] 연결 성공")
         return True
     except Exception as e:
-        logger.error(f"[PostgreSQL] 연결 실패: {e}")
+        logger.warning("[PostgreSQL] 연결 실패 — PG 미가용, 관련 기능 비활성화 (%s)", type(e).__name__)
         return False

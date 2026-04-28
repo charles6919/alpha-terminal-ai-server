@@ -12,16 +12,17 @@ class AnalysisCacheRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
-    def find_valid(self, symbol: str) -> Optional[AnalysisCacheORM]:
-        return (
+    def find_valid(self, symbol: str, query: Optional[str] = None) -> Optional[AnalysisCacheORM]:
+        q = (
             self._db.query(AnalysisCacheORM)
             .filter(
                 AnalysisCacheORM.symbol == symbol,
                 AnalysisCacheORM.expires_at > datetime.now(),
             )
-            .order_by(AnalysisCacheORM.created_at.desc())
-            .first()
         )
+        if query is not None:
+            q = q.filter(AnalysisCacheORM.query == query.strip())
+        return q.order_by(AnalysisCacheORM.created_at.desc()).first()
 
     def save(self, symbol: str, query: str, answer: str) -> AnalysisCacheORM:
         try:
